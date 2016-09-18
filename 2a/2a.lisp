@@ -28,27 +28,7 @@
       for line = (read-line stream nil)
       while line
       append (normalize-token line))))
-
-(defparameter *myhash* (make-hash-table :test 'equal))	
-
-		  
-(defparameter space (with-open-file (stream "brown2.txt" :direction :input)
-  (loop
-      for line = (read-line stream nil)
-      while line
-	  (setf con_word (intersection *word* (normalize-token line) :test #'equal))
-	  (loop
-		  for wd in con_word
-		  (loop
-		  	for con_wd in (normalize-token line)
-			if (gethash con_wd (gethash wd *myhash*))
-			do (incf (gethash con_wd (gethash wd *myhash*)))
-			else do 
-			(setf (gethash wd *myhash*) (make-hash-table :test 'equal))
-			(setf (gethash con_wd (gethash wd *myhash*)) 1))))))
-				  
-		  
-		  
+	  
 (defparameter *co_word* (with-open-file (stream "brown2.txt" :direction :input)
   (loop
       for line = (read-line stream nil)
@@ -56,7 +36,7 @@
 	  if (intersection *word* (normalize-token line) :test #'equal)
       	append (normalize-token line))))  
 			
-
+(defparameter *myhash* (make-hash-table :test 'equal))	
 (loop
 	for x in *co_word*
 	if (gethash x *myhash*)
@@ -85,8 +65,7 @@
               :initial-contents (loop for i from 0 below rows
                                    collect (make-array max-columns
                                                        :fill-pointer 0))))
-(setf matrix (make-row-resizeable-array m n))
+(setq matrix (make-row-resizeable-array m n))
 
-
-
+		   
 		 
