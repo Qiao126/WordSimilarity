@@ -49,23 +49,48 @@
     (format t "~S ~S~%" key value))
 ;(maphash #'print-hash-entry *myhash*)
 
-(defparameter *features* nil)
+(defparameter *feature* nil)
 (defun getkeys (key value)
 	(unless (string= key "")
-		(push key *features*)))
+		(push key *feature*)))
 (maphash #'getkeys *myhash*)
 
 (setf m (length *word*))
-(setf n (length *features*))
+(setf n (length *feature*))
+(print m)
+(print n)		
+								   
+(setf matrix (make-array (list m n) :initial-element 0))
 
-(defun make-row-resizeable-array (rows max-columns)
-  "Returns an array of length ROWS containing arrays of length MAX-COLUMNS, 
-  but with a fill pointer initially set to 0."
-  (make-array rows
-              :initial-contents (loop for i from 0 below rows
-                                   collect (make-array max-columns
-                                                       :fill-pointer 0))))
-(setq matrix (make-row-resizeable-array m n))
+(defun update (matrix slist conlist)
+	(loop
+		for wd in conlist
+		do (update2 matrix wd slist)))
+(defun update2 (matrix wd slist)
+	(loop
+		for co_wd in slist
+		do (incf (aref matrix (position wd *word* :test #'equal) (position co_wd *feature* :test #'equal)))))
+
+(defparameter space (with-open-file (stream "brown2.txt" :direction :input)
+  (loop
+      for line = (read-line stream nil)
+	  while line
+	  if (intersection *word* (normalize-token line) :test #'equal)
+	  do (update matrix (normalize-token line) (intersection *word* (normalize-token line) :test #'equal))))
+	  matrix)
+	  
+(defun get-feature-vector space str
+	(aref space (position str *word* :test #'equal)))
+
+(defun print-features space str n
+	(let ((alist nil))
+		(setf vc (get-feature-vector str))
+		(loop 
+			for i from 0
+			do (push (cons (nth i *feature*) (nth i vc)) alist))
+		(subseq (sort alist #'> :key #'cdr) 0 n)))
+		
+	
 
 		   
 		 
