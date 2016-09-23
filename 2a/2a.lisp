@@ -4,11 +4,7 @@
 ; 2a
 (defstruct VS 
    matrix 
-   similarity-fn )
-   
-(defparameter space (make-VS
-    :matrix (make-array (list m n) :initial-element 0)))
-	
+   (similarity-fn 'dot-product))
 	
 (defun strip_ipunc (string)  ;strip initial punctuations
     (remove-if-not #'alphanumericp string :start 0 
@@ -38,20 +34,14 @@
       while line
 	  if (intersection *word* (normalize-token line) :test #'equal)
       	append (normalize-token line))))  
-			
+						
 (defparameter *myhash* (make-hash-table :test 'equal))	
 (loop
 	for x in *co_word*
 	if (gethash x *myhash*)
 	do (incf (gethash x *myhash*))
 	else do (setf (gethash x *myhash*) 1))
-
-;(print (hash-table-count *myhash*))
-
-(defun print-hash-entry (key value)
-    (format t "~S ~S~%" key value))
-;(maphash #'print-hash-entry *myhash*)
-
+	
 (defparameter *stop-list*
   '("a" "about" "above" "after" "again" "against" "all" "am" "an" "and" "any" 
 	  "are" "aren't" "as" "at" "be" "because" "been" "before" "being" "below" 
@@ -83,6 +73,9 @@
 (print m)
 (print n)						   
 
+(defparameter space (make-VS
+    :matrix (make-array (list m n) :initial-element 0)))
+	
 (defun update (amatrix slist conlist)
 	(loop
 		for wd in conlist
@@ -93,22 +86,23 @@
 		if (not (member co_wd *stop-list* :test #'equal))
 		do (incf (aref amatrix (position wd *word* :test #'equal) (position co_wd *feature* :test #'equal)))))
 
-(defun read-corpus-to-vs (corpusfile) 
+(defun read-corpus-to-vs (vspace corpusfile) 
 	(with-open-file (stream corpusfile :direction :input)
 	  (loop
 	      for line = (read-line stream nil)
 		  while line
 		  if (intersection *word* (normalize-token line) :test #'equal)
-		  do (update (VS-matrix space) (normalize-token line) (intersection *word* (normalize-token line) :test #'equal)))))
+		  do (update (VS-matrix vspace) (normalize-token line) (intersection *word* (normalize-token line) :test #'equal)))))
 	  
-(read-corpus-to-vs "brown2.txt")	  
+(read-corpus-to-vs space "brown2.txt")	  
 (print "Vector space is built.")
 
-(defun array-row (arr row)
-    (make-array (array-dimension arr 1) 
-      :displaced-to arr 
-       :displaced-index-offset (* row (array-dimension arr 1))))
 ; 2c
+(defun array-row (arr row)
+    (loop 
+        for i from 0 to (- (first (last (array-dimensions arr))) 1)
+        collect (aref arr row i)))
+		
 (defun get-feature-vector (space str)
 	(array-row (VS-matrix space) (position str *word* :test #'equal)))
 ; 2d
@@ -117,7 +111,7 @@
 		(vc (get-feature-vector space str)))
 		(loop 
 			for i from 0 to (- (length *feature*) 1)
-			do (push (cons (nth i *feature*) (aref vc i)) alist))
+			do (push (cons (nth i *feature*) (nth i vc)) alist))
 		(subseq (sort alist #'> :key #'cdr) 0 n)))
 		
 ;(print (get-feature-vector space "food"))
@@ -127,22 +121,49 @@
 (defun euclidean-length (vec)
 	(let ((sum 0))
 		(loop
-			for i from 0 to (- (first (array-dimensions vec)) 1)
-			do (setf sum (+ sum (expt (aref vec i) 2))))
+			for i from 0 to (- (length vec) 1)
+			do (setf sum (+ sum (expt (nth i vec) 2))))
 			(setf sum (sqrt sum))))
 			
 (print (euclidean-length (get-feature-vector space "boston")))
 
-(defun length-normalize-vs (space)
+; 3b
+(defun length-normalize-vs (vspace)
+	(loop
+		for i from 0 to (- m 1)
+		do (length-normalize-vs2 vspace i)))
+		
+(defun length-normalize-vs2 (vspace2 x)
 	(let ((len 0))
+		(setf len (euclidean-length (get-feature-vector vspace2 (nth x *word*))))
+		;(print (cons x len))
 		(loop
-			for i from 0 to (- (first (array-dimensions (VS-matrix space))) 1)
-			do ((setf len (get-feature-vector (space (position i *word* :test #'equal))))
-				(loop
-				for j from 0 to (- (first (last (array-dimensions (VS-matrix space)))) 1)
-				do (setf (aref (VS-matrix space) i j) (/ (aref (VS-matrix space) i j) len)))))))		
-
+			for j from 0 to (- n 1)
+			do (setf (aref (VS-matrix vspace2) x j) (/ (aref (VS-matrix vspace2) x j) len)))))
+		
+(length-normalize-vs space)
 (print (euclidean-length (get-feature-vector space "boston")))
+
+; 3c
+
+(defun dot-product (space x y)
+	(let ((sum 0))	
+		(setf xvec (get-feature-vector space x))
+		(setf yvec (get-feature-vector space y))
+		;(setf conv (intersection xvec yvec :test #'equal))
+		(loop 
+			for i from 0 to (- (length xvec) 1)
+			;if (> (* (nth i xvec) (nth i yvec)) 0)
+			do (setf sum (+ sum (* (nth i xvec) (nth i yvec)))))
+		sum))
+; 3d		
+			
+(defun word-similarity (vspace str1 str2)
+	(Funcall (VS-similarity-fn vspace) vspace str1 str2))
+
+
+(print (word-similarity space "university" "college"))
+(print (word-similarity space "china" "college"))	
 	
 
 		   
