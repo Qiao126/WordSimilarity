@@ -1,8 +1,15 @@
 ; 1
 ; Except for bag-of-words, we could also consider context from word frequency (e.g. tf-idf), parse trees, POS, and dependency relations, etc.
 	
-; 2
-
+; 2a
+(defstruct VS 
+   matrix 
+   similarity-fn )
+   
+(defparameter space (make-VS
+    :matrix (make-array (list m n) :initial-element 0)))
+	
+	
 (defun strip_ipunc (string)  ;strip initial punctuations
     (remove-if-not #'alphanumericp string :start 0 
     :end (position-if #'alphanumericp string)))
@@ -72,16 +79,9 @@
 
 (setf m (length *word*))
 (setf n (length *feature*))
-(print "Word-list and feature-list are built.")
+(print "Matrix dimensions:")
 (print m)
-(print n)
-
-(defstruct VS 
-   matrix 
-   similarity-fn )
-(defparameter space (make-VS
-    :matrix (make-array (list m n) :initial-element 0)))
-						   
+(print n)						   
 
 (defun update (amatrix slist conlist)
 	(loop
@@ -108,10 +108,10 @@
     (make-array (array-dimension arr 1) 
       :displaced-to arr 
        :displaced-index-offset (* row (array-dimension arr 1))))
-	   
+; 2c
 (defun get-feature-vector (space str)
 	(array-row (VS-matrix space) (position str *word* :test #'equal)))
-	
+; 2d
 (defun print-features (space str n)
 	(let ((alist nil)
 		(vc (get-feature-vector space str)))
@@ -121,9 +121,28 @@
 		(subseq (sort alist #'> :key #'cdr) 0 n)))
 		
 ;(print (get-feature-vector space "food"))
-(print (print-features space "university" 9))
+;(print (print-features space "university" 9))
 
-		
+; 3a
+(defun euclidean-length (vec)
+	(let ((sum 0))
+		(loop
+			for i from 0 to (- (first (array-dimensions vec)) 1)
+			do (setf sum (+ sum (expt (aref vec i) 2))))
+			(setf sum (sqrt sum))))
+			
+(print (euclidean-length (get-feature-vector space "boston")))
+
+(defun length-normalize-vs (space)
+	(let ((len 0))
+		(loop
+			for i from 0 to (- (first (array-dimensions (VS-matrix space))) 1)
+			do ((setf len (get-feature-vector (space (position i *word* :test #'equal))))
+				(loop
+				for j from 0 to (- (first (last (array-dimensions (VS-matrix space)))) 1)
+				do (setf (aref (VS-matrix space) i j) (/ (aref (VS-matrix space) i j) len)))))))		
+
+(print (euclidean-length (get-feature-vector space "boston")))
 	
 
 		   
