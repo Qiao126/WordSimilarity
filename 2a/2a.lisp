@@ -142,7 +142,7 @@
 (defun word-similarity (vspace str1 str2)
 	(Funcall (VS-similarity-fn vspace) vspace str1 str2))
 
-(print (word-similarity space "university" "college"))
+;(word-similarity space "university" "college")
 
 	
 
